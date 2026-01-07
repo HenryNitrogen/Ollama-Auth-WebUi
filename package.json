@@ -1,0 +1,12 @@
+{
+  "name": "ollama-proxy",
+  "version": "2.0.0",
+  "description": "Ollama Proxy with WebUI - Model management, chat interface, and API token management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ollama Proxy - Management Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --bg-tertiary: #242424;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0a0;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: #333;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Login Page */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .login-box p {
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .login-box input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .login-box button:hover {
+      background: var(--accent-hover);
+    }
+
+    .login-error {
+      color: var(--danger);
+      font-size: 13px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    /* Main Layout */
+    .app-container {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .nav-menu {
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 4px;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+    }
+
+    .logout-btn:hover {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .main-content {
+      margin-left: 260px;
+      padding: 32px;
+      min-height: 100vh;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-header h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .page-header p {
+      color: var(--text-secondary);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    /* Models List */
+    .model-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .model-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .model-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .model-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .model-name {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .model-size {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* Token List */
+    .token-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .token-info h4 {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .token-value {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    /* Input Group */
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Chat Interface */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 180px);
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .chat-header select {
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      min-width: 200px;
+    }
+
+    .chat-header select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 16px;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .message.user .message-avatar {
+      background: var(--accent);
+    }
+
+    .message.assistant .message-avatar {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .message-content {
+      flex: 1;
+      background: var(--bg-tertiary);
+      padding: 14px 18px;
+      border-radius: 12px;
+      line-height: 1.6;
+    }
+
+    .message.user .message-content {
+      background: var(--accent);
+    }
+
+    .chat-input-container {
+      display: flex;
+      gap: 12px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input-container textarea {
+      flex: 1;
+      padding: 14px 18px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 14px;
+      resize: none;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+
+    .chat-input-container textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .chat-input-container button {
+      padding: 14px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .chat-input-container button:hover {
+      background: var(--accent-hover);
+    }
+
+    .chat-input-container button:disabled {
+      background: var(--bg-tertiary);
+      cursor: not-allowed;
+    }
+
+    /* Progress */
+    .progress-container {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .progress-container.active {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .progress-text {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* About Page */
+    .about-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .api-docs {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .api-docs h4 {
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .api-docs pre {
+      background: var(--bg-primary);
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .api-docs code {
+      color: #a5b4fc;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      display: none;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .modal h3 {
+      margin-bottom: 16px;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .new-token-display {
+      background: var(--bg-tertiary);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .new-token-display label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .new-token-display code {
+      display: block;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 14px;
+      word-break: break-all;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+    }
+
+    .copy-btn {
+      margin-top: 12px;
+      width: 100%;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: var(--accent);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div class="login-container" id="loginPage">
+    <div class="login-box">
+      <div class="logo-icon" style="margin: 0 auto 24px; width: 56px; height: 56px; font-size: 24px;">OP</div>
+      <h1>Ollama Proxy</h1>
+      <p>Enter your password to access the management console</p>
+      <div class="login-error" id="loginError" style="display: none;"></div>
+      <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
+      <button onclick="login()">Sign In</button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div class="app-container" id="appContainer">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">OP</div>
+        <div class="logo-text">Ollama Proxy</div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" data-page="about">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>About</span>
+        </div>
+        <div class="nav-item" data-page="chat">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+          <span>Chat</span>
+        </div>
+        <div class="nav-item" data-page="models">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <span>Models</span>
+        </div>
+        <div class="nav-item" data-page="tokens">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+          <span>API Tokens</span>
+        </div>
+      </nav>
+
+      <div class="logout-btn" onclick="logout()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        <span>Logout</span>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- About Page -->
+      <div class="page active" id="aboutPage">
+        <div class="page-header">
+          <h2>Welcome to Ollama Proxy</h2>
+          <p>A production-ready proxy server for Ollama with built-in management interface</p>
+        </div>
+
+        <div class="about-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            </div>
+            <h3>Interactive Chat</h3>
+            <p>Chat with any downloaded Ollama model directly from the web interface. Supports real-time streaming responses.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+            <h3>Model Management</h3>
+            <p>Download new models from the Ollama library or remove existing ones. Monitor download progress in real-time.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            </div>
+            <h3>API Token Management</h3>
+            <p>Create and manage API tokens for secure access to the proxy endpoint. Perfect for integrating with other applications.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            </div>
+            <h3>Secure Access</h3>
+            <p>Password-protected web interface with session management. API endpoints secured with Bearer token authentication.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+            </div>
+            <h3>OpenAI Compatible</h3>
+            <p>API endpoint compatible with OpenAI's chat completions format. Easy drop-in replacement for existing applications.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+            </div>
+            <h3>Docker Ready</h3>
+            <p>Fully containerized with Docker support. Easy deployment with docker-compose and persistent volume storage.</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 32px;">
+          <div class="card-header">
+            <div class="card-title">API Documentation</div>
+            <span class="badge">v1</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 16px;">Use the API endpoint to integrate Ollama with your applications.</p>
+          
+          <div class="api-docs">
+            <h4>Endpoint: POST /v1/chat/completions</h4>
+            <pre><code>curl -X POST http://your-server:924/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -d '{
+    "model": "llama3.2",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ],
+    "stream": false
+  }'</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Page -->
+      <div class="page" id="chatPage">
+        <div class="page-header">
+          <h2>Chat</h2>
+          <p>Have a conversation with your AI models</p>
+        </div>
+
+        <div class="card">
+          <div class="chat-container">
+            <div class="chat-header">
+              <label>Model:</label>
+              <select id="chatModelSelect">
+                <option value="">Select a model...</option>
+              </select>
+              <button class="btn btn-secondary" onclick="clearChat()">Clear Chat</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+              <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <p>Select a model and start chatting</p>
+              </div>
+            </div>
+
+            <div class="chat-input-container">
+              <textarea id="chatInput" rows="3" placeholder="Type your message..." onkeydown="handleChatKeydown(event)"></textarea>
+              <button onclick="sendMessage()" id="sendBtn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Models Page -->
+      <div class="page" id="modelsPage">
+        <div class="page-header">
+          <h2>Model Management</h2>
+          <p>Download and manage your Ollama models</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Download New Model</div>
+          </div>
+          <div class="input-group">
+            <input type="text" id="modelNameInput" placeholder="Enter model name (e.g., llama3.2, qwen2.5:0.5b)">
+            <button class="btn btn-primary" onclick="pullModel()">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Download
+            </button>
+          </div>
+          <div class="progress-container" id="downloadProgress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Downloading...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Installed Models</div>
+            <button class="btn btn-secondary" onclick="refreshModels()">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Refresh
+            </button>
+          </div>
+          <div class="model-grid" id="modelList">
+            <div class="empty-state">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              <p>No models installed yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tokens Page -->
+      <div class="page" id="tokensPage">
+        <div class="page-header">
+          <h2>API Tokens</h2>
+          <p>Manage your API access tokens</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Create New Token</div>
+          </div>
+          <div class="input-group">
+            <input type="text" id="tokenNameInput" placeholder="Token name (e.g., My Application)">
+            <button class="btn btn-primary" onclick="createToken()">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Create Token
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Active Tokens</div>
+          </div>
+          <div id="tokenList">
+            <div class="empty-state">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+              <p>No tokens created yet</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- New Token Modal -->
+  <div class="modal-overlay" id="tokenModal">
+    <div class="modal">
+      <h3>New Token Created</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+        Make sure to copy this token now. You won't be able to see it again!
+      </p>
+      <div class="new-token-display">
+        <label>API Token</label>
+        <code id="newTokenValue"></code>
+      </div>
+      <button class="btn btn-primary copy-btn" onclick="copyToken()">Copy Token</button>
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button class="btn btn-secondary" onclick="closeTokenModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let sessionId = localStorage.getItem('sessionId');
+    let chatMessages = [];
+    let currentNewToken = '';
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      if (sessionId) {
+        checkSession();
+      }
+
+      // Setup navigation
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const page = item.dataset.page;
+          navigateTo(page);
+        });
+      });
+
+      // Enter key for login
+      document.getElementById('passwordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') login();
+      });
+    });
+
+    // Auth
+    async function login() {
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('loginError');
+      
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          sessionId = data.sessionId;
+          localStorage.setItem('sessionId', sessionId);
+          showApp();
+        } else {
+          errorEl.textContent = 'Invalid password';
+          errorEl.style.display = 'block';
+        }
+      } catch (e) {
+        errorEl.textContent = 'Connection error';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/check', {
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          showApp();
+        } else {
+          localStorage.removeItem('sessionId');
+          sessionId = null;
+        }
+      } catch (e) {
+        localStorage.removeItem('sessionId');
+        sessionId = null;
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'X-Session-Id': sessionId }
+        });
+      } catch (e) {}
+      
+      localStorage.removeItem('sessionId');
+      sessionId = null;
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('appContainer').style.display = 'none';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    function showApp() {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('appContainer').style.display = 'block';
+      refreshModels();
+      refreshTokens();
+    }
+
+    // Navigation
+    function navigateTo(page) {
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
+      });
+
+      document.querySelectorAll('.page').forEach(p => {
+        p.classList.toggle('active', p.id === page + 'Page');
+      });
+
+      if (page === 'models') refreshModels();
+      if (page === 'tokens') refreshTokens();
+      if (page === 'chat') loadChatModels();
+    }
+
+    // Models
+    async function refreshModels() {
+      try {
+        const res = await fetch('/api/models', {
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          renderModels(data.models || []);
+        }
+      } catch (e) {
+        console.error('Failed to fetch models:', e);
+      }
+    }
+
+    function renderModels(models) {
+      const container = document.getElementById('modelList');
+      
+      if (models.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <p>No models installed yet</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = models.map(model => `
+        <div class="model-item">
+          <div class="model-info">
+            <div class="model-icon">
+              <svg fill="none" stroke="white" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            </div>
+            <div>
+              <div class="model-name">${model.name}</div>
+              <div class="model-size">${formatSize(model.size)}</div>
+            </div>
+          </div>
+          <button class="btn btn-danger" onclick="deleteModel('${model.name}')">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    function formatSize(bytes) {
+      if (!bytes) return 'Unknown size';
+      const gb = bytes / (1024 * 1024 * 1024);
+      if (gb >= 1) return gb.toFixed(2) + ' GB';
+      const mb = bytes / (1024 * 1024);
+      return mb.toFixed(2) + ' MB';
+    }
+
+    async function pullModel() {
+      const input = document.getElementById('modelNameInput');
+      const name = input.value.trim();
+      
+      if (!name) {
+        alert('Please enter a model name');
+        return;
+      }
+
+      const progressContainer = document.getElementById('downloadProgress');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      
+      progressContainer.classList.add('active');
+      progressFill.style.width = '0%';
+      progressText.textContent = 'Starting download...';
+
+      try {
+        const res = await fetch('/api/models/pull', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Id': sessionId
+          },
+          body: JSON.stringify({ name })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                progressText.textContent = 'Download complete!';
+                progressFill.style.width = '100%';
+                setTimeout(() => {
+                  progressContainer.classList.remove('active');
+                  input.value = '';
+                  refreshModels();
+                }, 1500);
+              } else {
+                try {
+                  const json = JSON.parse(data);
+                  if (json.total && json.completed) {
+                    const percent = Math.round((json.completed / json.total) * 100);
+                    progressFill.style.width = percent + '%';
+                    progressText.textContent = `Downloading: ${percent}%`;
+                  } else if (json.status) {
+                    progressText.textContent = json.status;
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+        }
+      } catch (e) {
+        progressText.textContent = 'Download failed: ' + e.message;
+        setTimeout(() => progressContainer.classList.remove('active'), 3000);
+      }
+    }
+
+    async function deleteModel(name) {
+      if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+
+      try {
+        const res = await fetch(`/api/models/${encodeURIComponent(name)}`, {
+          method: 'DELETE',
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          refreshModels();
+        } else {
+          alert('Failed to delete model');
+        }
+      } catch (e) {
+        alert('Failed to delete model: ' + e.message);
+      }
+    }
+
+    // Tokens
+    async function refreshTokens() {
+      try {
+        const res = await fetch('/api/tokens', {
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          const tokens = await res.json();
+          renderTokens(tokens);
+        }
+      } catch (e) {
+        console.error('Failed to fetch tokens:', e);
+      }
+    }
+
+    function renderTokens(tokens) {
+      const container = document.getElementById('tokenList');
+      
+      if (tokens.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            <p>No tokens created yet</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = tokens.map(token => `
+        <div class="token-item">
+          <div class="token-info">
+            <h4>${token.name}</h4>
+            <span class="token-value">${token.token}</span>
+          </div>
+          <button class="btn btn-danger" onclick="deleteToken('${token.id}')">Revoke</button>
+        </div>
+      `).join('');
+    }
+
+    async function createToken() {
+      const input = document.getElementById('tokenNameInput');
+      const name = input.value.trim() || 'Unnamed Token';
+
+      try {
+        const res = await fetch('/api/tokens', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Id': sessionId
+          },
+          body: JSON.stringify({ name })
+        });
+
+        if (res.ok) {
+          const token = await res.json();
+          currentNewToken = token.token;
+          document.getElementById('newTokenValue').textContent = token.token;
+          document.getElementById('tokenModal').classList.add('active');
+          input.value = '';
+          refreshTokens();
+        }
+      } catch (e) {
+        alert('Failed to create token: ' + e.message);
+      }
+    }
+
+    async function deleteToken(id) {
+      if (!confirm('Are you sure you want to revoke this token?')) return;
+
+      try {
+        const res = await fetch(`/api/tokens/${id}`, {
+          method: 'DELETE',
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          refreshTokens();
+        }
+      } catch (e) {
+        alert('Failed to delete token: ' + e.message);
+      }
+    }
+
+    function copyToken() {
+      navigator.clipboard.writeText(currentNewToken);
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Token', 2000);
+    }
+
+    function closeTokenModal() {
+      document.getElementById('tokenModal').classList.remove('active');
+      currentNewToken = '';
+    }
+
+    // Chat
+    async function loadChatModels() {
+      try {
+        const res = await fetch('/api/models', {
+          headers: { 'X-Session-Id': sessionId }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const select = document.getElementById('chatModelSelect');
+          select.innerHTML = '<option value="">Select a model...</option>' +
+            (data.models || []).map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+        }
+      } catch (e) {
+        console.error('Failed to load models:', e);
+      }
+    }
+
+    function handleChatKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const model = document.getElementById('chatModelSelect').value;
+      const message = input.value.trim();
+
+      if (!model) {
+        alert('Please select a model first');
+        return;
+      }
+
+      if (!message) return;
+
+      input.value = '';
+      document.getElementById('sendBtn').disabled = true;
+
+      // Add user message
+      chatMessages.push({ role: 'user', content: message });
+      renderChatMessages();
+
+      // Add placeholder for assistant
+      const assistantIdx = chatMessages.length;
+      chatMessages.push({ role: 'assistant', content: '' });
+      renderChatMessages();
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Id': sessionId
+          },
+          body: JSON.stringify({
+            model,
+            messages: chatMessages.slice(0, -1),
+            stream: true
+          })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data !== '[DONE]') {
+                try {
+                  const json = JSON.parse(data);
+                  if (json.message?.content) {
+                    chatMessages[assistantIdx].content += json.message.content;
+                    renderChatMessages();
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+        }
+      } catch (e) {
+        chatMessages[assistantIdx].content = 'Error: ' + e.message;
+        renderChatMessages();
+      }
+
+      document.getElementById('sendBtn').disabled = false;
+    }
+
+    function renderChatMessages() {
+      const container = document.getElementById('chatMessages');
+      
+      if (chatMessages.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <p>Select a model and start chatting</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = chatMessages.map(msg => `
+        <div class="message ${msg.role}">
+          <div class="message-avatar">${msg.role === 'user' ? 'U' : 'AI'}</div>
+          <div class="message-content">${escapeHtml(msg.content) || '<span class="loading"></span>'}</div>
+        </div>
+      `).join('');
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearChat() {
+      chatMessages = [];
+      renderChatMessages();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML.replace(/\n/g, '<br>');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  ollama-proxy:
+    build: .
+    container_name: ollama-proxy
+    ports:
+      - "924:924"      # WebUI and API
+      - "11434:11434"  # Ollama API (optional, for direct access)
+    environment:
+      - WEBUI_PASSWORD=your_secure_password_here
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama  # Persist Ollama models
+      - ollama-tokens:/app/data    # Persist API tokens
+
+volumes:
+  ollama-data:
+  ollama-tokens:
+
